@@ -11,6 +11,7 @@ using Cencora.TimeVault.Services.Timezone.TimezoneRetrieval;
 using Cencora.TimeVault.Services.Timezone.TimezoneRetrieval.Azure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
+using Microsoft.OpenApi.Models;
 
 namespace Cencora.TimeVault;
 
@@ -54,6 +55,35 @@ public class Startup
             options.SchemaFilter<VolumeSchemaFilter>();
             options.SchemaFilter<WeightSchemaFilter>();
             options.SchemaFilter<AddressSchemaFilter>();
+            
+            options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+            {
+                Description = "OAuth2.0 Authorization Code Flow",
+                Name = "oauth2",
+                Type = SecuritySchemeType.OAuth2,
+                Flows = new OpenApiOAuthFlows
+                {
+                    AuthorizationCode = new OpenApiOAuthFlow
+                    {
+                        AuthorizationUrl = new Uri(Configuration["AzureAdSwagger:AuthorizationUrl"] ?? throw new InvalidOperationException()),
+                        TokenUrl = new Uri(Configuration["AzureAdSwagger:TokenUrl"] ?? throw new InvalidOperationException()),
+                        Scopes = new Dictionary<string, string>
+                        {
+                            { Configuration["AzureAdSwagger:Scopes"] ?? throw new InvalidOperationException(), "Access the API" }
+                        }
+                    }
+                }
+            });
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" }
+                    },
+                    new[] { Configuration["AzureAdSwagger:Scopes"] ?? throw new InvalidOperationException() }
+                }
+            });
         });
 
         services
@@ -79,7 +109,12 @@ public class Startup
         {
             app.UseDeveloperExceptionPage();
             app.UseSwagger();
-            app.UseSwaggerUI();
+            app.UseSwaggerUI(options =>
+            {
+                options.OAuthClientId(Configuration["AzureAdSwagger:ClientId"]);
+                options.OAuthUsePkce();
+                options.OAuthScopeSeparator(" ");
+            });
         }
 
         app.UseHttpsRedirection();

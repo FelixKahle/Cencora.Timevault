@@ -7,6 +7,7 @@ using Cencora.TimeVault.Extensions.Timezone;
 using Cencora.TimeVault.Services.Timezone;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Identity.Web.Resource;
 
 namespace Cencora.TimeVault.Controllers.Timezone;
 
@@ -32,6 +33,7 @@ public class TimeZoneController : ControllerBase
     
     [HttpGet]
     [Route("status")]
+    [RequiredScope("TimeZone.Status.Read")]
     public ActionResult<string> Status()
     {
         return "OK";
